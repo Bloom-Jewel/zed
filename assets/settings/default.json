@@ -908,8 +908,8 @@
     "folder_icons": true,
     // What branch name to use if `init.defaultBranch` is not set
     //
-    // Default: main
-    "fallback_branch_name": "main",
+    // Default: master
+    "fallback_branch_name": "master",
     // Whether to sort entries in the panel by path or by status (the default).
     //
     // Default: false
