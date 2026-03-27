@@ -177,7 +177,7 @@ Conflicting files appear in the Git Panel with a warning icon. You can also see 
 
 Each conflict shows three buttons:
 
-- **Use [branch-name]**: Keep the changes from one branch (shows the actual branch name, like "main")
+- **Use [branch-name]**: Keep the changes from one branch (shows the actual branch name, like "master")
 - **Use [other-branch]**: Keep the changes from the other branch (like "feature-branch")
 - **Use Both**: Keep both sets of changes, with your branch's changes first
 
