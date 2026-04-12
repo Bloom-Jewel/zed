@@ -35,6 +35,9 @@ jobs:
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
       with:
         node-version: '20'
+    - &step-cargo-install-nextest
+      name: Cargo Install Nextest
+      uses: taiki-e/install-action@nextest
     - name: Cleanup Target
       shell: pwsh
       run: ./script/clear-target-dir-if-larger-than.ps1 250
@@ -55,8 +58,7 @@ jobs:
     - *step-checkout
     - *step-cargo-ci
     - *step-node-setup
-    - name: Cargo Install Nextest
-      uses: taiki-e/install-action@nextest
+    - *step-cargo-install-nextest
     - name: Cleanup Target
       run: ./script/clear-target-dir-if-larger-than 250
     - *step-cargo-run-nextest
