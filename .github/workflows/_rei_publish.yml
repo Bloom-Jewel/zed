@@ -13,53 +13,40 @@ on:
 concurrency:
   group: blacksmith-build-${{ github.ref_name }}
   cancel-in-progress: true
-x-templates:
-  repository-condition: &template-repo-condition |
-    (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel')
-  repository-env-nightly: &template-env-nightly |
-    ${{ github.ref == 'refs/heads/nightly' }}
-  step-checkout-repo: &step-checkout
-    uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-    with:
-      clean: false
-  step-cargo-ci-setup: &step-cargo-ci
-    name: Setup Cargo Config
-    shell: bash
-    run: |
-      mkdir -p ../.cargo
-      cp .cargo/ci-config.toml ../.cargo/config.toml
-  step-node-setup: &step-node-setup
-    name: Setup Node
-    uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
-    with:
-      node-version: '20'
-  step-cargo-run-nextest: &step-cargo-run-nextest
-    name: Cargo Nextest
-    run: cargo nextest run --workspace --no-fail-fast --no-tests=warn
-  step-list-target: &step-list-target
-    name: List Target Folder
-    shell: bash
-    run: ls -lR ./target
-  step-cargo-ci-cleanup: &step-cargo-ci-clean
-    name: Cleanup Cargo Config
-    if: always()
-    shell: bash
-    run:
-      rm -rf ../.cargo
 jobs:
   test-windows:
-    if: *template-repo-condition
+    if: &template-repo-condition |
+      (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel')
     name: Test on Windows
     runs-on: blacksmith-2vcpu-windows-2025
     steps:
-    - *step-checkout
-    - *step-cargo-ci
-    - *step-node-setup
+    - &step-checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        clean: false
+    - &step-cargo-ci
+      name: Setup Cargo Config
+      shell: bash
+      run: |
+        mkdir -p ../.cargo
+        cp .cargo/ci-config.toml ../.cargo/config.toml
+    - &step-node-setup
+      name: Setup Node
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      with:
+        node-version: '20'
     - name: Cleanup Target
       shell: pwsh
       run: ./script/clear-target-dir-if-larger-than.ps1 250
-    - *step-cargo-run-nextest
-    - *step-cargo-ci-clean
+    - &step-cargo-run-nextest
+      name: Cargo Nextest
+      run: cargo nextest run --workspace --no-fail-fast --no-tests=warn
+    - &step-cargo-ci-clean
+      name: Cleanup Cargo Config
+      if: always()
+      shell: bash
+      run:
+        rm -rf ../.cargo
   test-linux:
     if: *template-repo-condition
     name: Test on Ubuntu
@@ -78,7 +65,8 @@ jobs:
     needs:
     - test-windows
     env:
-      IS_NIGHTLY_BUILD: *template-env-nightly
+      IS_NIGHTLY_BUILD: &template-env-nightly |
+        ${{ github.ref == 'refs/heads/nightly' }}
       CARGO_INCREMENTAL: 0
       ZED_ARCH: x86_64
     name: Build on Windows
@@ -87,7 +75,10 @@ jobs:
     - *step-checkout
     - name: Build Package
       run: cargo build --release --package zed --target ${{ env.ZED_ARCH }}-pc-windows-msvc
-    - *step-list-target
+    - &step-list-target
+      name: List Target Folder
+      shell: bash
+      run: ls -lR ./target
   build-linux:
     needs:
     - test-linux
