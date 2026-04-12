@@ -20,6 +20,9 @@ jobs:
     name: Test on Windows
     runs-on: blacksmith-2vcpu-windows-2025
     steps:
+    - &step-git-longpath
+      name: Setup Git Configuration
+      run: git config --global core.longpaths true
     - &step-checkout
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
@@ -80,6 +83,7 @@ jobs:
     name: Build on Windows
     runs-on: blacksmith-2vcpu-windows-2025
     steps:
+    - *step-git-longpath
     - *step-checkout
     - name: Build Package
       run: cargo build --release --package zed --target ${{ env.ZED_ARCH }}-pc-windows-msvc
