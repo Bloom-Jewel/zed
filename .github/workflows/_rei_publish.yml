@@ -36,6 +36,15 @@ jobs:
       run: |
         mkdir -p ../.cargo
         cp .cargo/ci-config.toml ../.cargo/config.toml
+    - &step-windows-setup
+      name: Setup
+      run: |
+        $progressPreference = 'silentlyContinue'
+        Install-PackageProvider -Name NuGet -Force | Out-Null
+        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null
+        Repair-WinGetPackageManager
+
+        winget install -e --id Microsoft.VisualStudio.2022.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Component.VC.Runtimes.x86.x64.Spectre"
     - &step-node-setup
       name: Setup Node
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -92,6 +101,7 @@ jobs:
     steps:
     - *step-git-longpath
     - *step-checkout
+    - *step-windows-setup
     - name: Build Package
       run: cargo build --release --package zed --target ${{ env.ZED_ARCH }}-pc-windows-msvc
     - &step-list-target
