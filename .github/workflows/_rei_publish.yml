@@ -15,8 +15,11 @@ concurrency:
   cancel-in-progress: true
 jobs:
   test-windows:
-    if: &template-repo-condition |
-      (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel')
+    if: |
+      ${{
+        (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
+        vars.USE_WINDOWS_RUNNER != 0
+      }}
     name: Test on Windows
     runs-on: blacksmith-2vcpu-windows-2025
     steps:
@@ -54,7 +57,11 @@ jobs:
       run:
         rm -rf ../.cargo
   test-linux:
-    if: *template-repo-condition
+    if: |
+      ${{
+        (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
+        vars.USE_LINUX_RUNNER != 0
+      }}
     name: Test on Ubuntu
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
