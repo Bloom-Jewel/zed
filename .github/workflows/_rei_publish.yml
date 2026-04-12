@@ -58,6 +58,12 @@ jobs:
     - *step-checkout
     - *step-cargo-ci
     - *step-node-setup
+    - &step-linux-general-setup
+      name: Setup
+      run: ./script/linux
+    - &step-linux-wasi-setup
+      name: Setup WASI
+      run: ./script/download-wasi-sdk
     - *step-cargo-install-nextest
     - name: Cleanup Target
       run: ./script/clear-target-dir-if-larger-than 250
@@ -91,10 +97,8 @@ jobs:
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
     - *step-checkout
-    - name: Setup
-      run: ./script/linux
-    - name: Setup WASI
-      run: ./script/download-wasi-sdk
+    - *step-linux-general-setup
+    - *step-linux-wasi-setup
     - name: Build Package
       run: |
         version_info=$(rustc --version --verbose)
