@@ -14,10 +14,10 @@ concurrency:
   group: blacksmith-build-${{ github.ref_name }}
   cancel-in-progress: true
 x-templates:
-  repository-condition: &template-repo-condition
-    if: (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel')
-  repository-env: &template-env
-    IS_NIGHTLY_BUILD: ${{ github.ref == 'refs/heads/nightly' }}
+  repository-condition: &template-repo-condition |
+    (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel')
+  repository-env-nightly: &template-env-nightly |
+    ${{ github.ref == 'refs/heads/nightly' }}
   step-checkout-repo: &step-checkout
     uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
     with:
@@ -48,55 +48,56 @@ x-templates:
       rm -rf ../.cargo
 jobs:
   test-windows:
-    <<: *template-repo-condition
+    if: *template-repo-condition
     name: Test on Windows
     runs-on: blacksmith-2vcpu-windows-2025
     steps:
-    - <<: *step-checkout
-    - <<: *step-cargo-ci
-    - <<: *step-node-setup
+    - *step-checkout
+    - *step-cargo-ci
+    - *step-node-setup
     - name: Cleanup Target
       shell: pwsh
       run: ./script/clear-target-dir-if-larger-than.ps1 250
-    - <<: *step-cargo-run-nextest
-    - <<: *step-cargo-ci-clean
+    - *step-cargo-run-nextest
+    - *step-cargo-ci-clean
   test-linux:
-    <<: *template-repo-condition
+    if: *template-repo-condition
     name: Test on Ubuntu
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
-    - <<: *step-checkout
-    - <<: *step-cargo-ci
-    - <<: *step-node-setup
+    - *step-checkout
+    - *step-cargo-ci
+    - *step-node-setup
     - name: Cargo Install Nextest
       uses: taiki-e/install-action@nextest
     - name: Cleanup Target
       run: ./script/clear-target-dir-if-larger-than 250
-    - <<: *step-cargo-run-nextest
-    - <<: *step-cargo-ci-clean
+    - *step-cargo-run-nextest
+    - *step-cargo-ci-clean
   build-windows:
     needs:
     - test-windows
     env:
-      <<: *template-env
+      IS_NIGHTLY_BUILD: *template-env-nightly
       CARGO_INCREMENTAL: 0
       ZED_ARCH: x86_64
     name: Build on Windows
     runs-on: blacksmith-2vcpu-windows-2025
     steps:
-    - <<: *step-checkout
+    - *step-checkout
     - name: Build Package
       run: cargo build --release --package zed --target ${{ env.ZED_ARCH }}-pc-windows-msvc
-    - <<: *step-list-target
+    - *step-list-target
   build-linux:
-    <<: *template-repo-condition
+    needs:
+    - test-linux
     env:
-      <<: *template-env
+      IS_NIGHTLY_BUILD: *template-env-nightly
       CARGO_INCREMENTAL: 0
     name: Build on Ubuntu
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
-    - <<: *step-checkout
+    - *step-checkout
     - name: Setup
       run: ./script/linux
     - name: Setup WASI
@@ -107,4 +108,4 @@ jobs:
         host_line=$(echo "$version_info" | grep host)
         target_triple=${host_line#*: }
         cargo build --release --package zed --target ${target_triple}-pc-windows-msvc
-    - <<: *step-list-target
+    - *step-list-target
