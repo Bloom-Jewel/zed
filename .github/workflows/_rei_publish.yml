@@ -19,9 +19,9 @@ jobs:
     if: |
       ${{
         (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
-        vars.USE_WINDOWS_RUNNER != 0
+        vars.USE_WINDOWS_RUNNER != 0 && vars.USE_COMPLEX_RUNNER != 0
       }}
-    name: Test on Windows
+    name: Test on Windows (Complex)
     runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
     - &step-git-longpath
@@ -64,9 +64,9 @@ jobs:
     if: |
       ${{
         (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
-        vars.USE_LINUX_RUNNER != 0
+        vars.USE_LINUX_RUNNER != 0 && vars.USE_COMPLEX_RUNNER != 0
       }}
-    name: Test on Ubuntu
+    name: Test on Ubuntu (Complex)
     runs-on: ${{ vars.NAME_LINUX_RUNNER }}
     steps:
     - *step-checkout
@@ -91,7 +91,7 @@ jobs:
         ${{ github.ref == 'refs/heads/nightly' }}
       CARGO_INCREMENTAL: 0
       ZED_ARCH: x86_64
-    name: Build on Windows
+    name: Build on Windows (Complex)
     runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
     - *step-git-longpath
@@ -106,14 +106,14 @@ jobs:
     if: |
       ${{
         (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
-        vars.USE_WINDOWS_RUNNER != 0
+        vars.USE_WINDOWS_RUNNER != 0 && vars.USE_SIMPLE_RUNNER != 0
       }}
     env:
       IS_NIGHTLY_BUILD: &template-env-nightly |
         ${{ github.ref == 'refs/heads/nightly' }}
       CARGO_INCREMENTAL: 0
       ZED_ARCH: x86_64
-    name: Build on Windows
+    name: Build on Windows (Simple)
     runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
     - *step-git-longpath
@@ -140,7 +140,7 @@ jobs:
     env:
       IS_NIGHTLY_BUILD: *template-env-nightly
       CARGO_INCREMENTAL: 0
-    name: Build on Ubuntu
+    name: Build on Ubuntu (Complex)
     runs-on: ${{ vars.NAME_LINUX_RUNNER }}
     steps:
     - *step-checkout
