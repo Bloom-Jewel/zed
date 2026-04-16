@@ -4,6 +4,7 @@ name: Publish Build
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  ZED_UPDATE_EXPLANATION: Auto updates disabled on this build.
 on:
   push:
     paths:
