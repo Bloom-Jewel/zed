@@ -15,7 +15,7 @@ concurrency:
   group: blacksmith-build-${{ github.ref_name }}
   cancel-in-progress: true
 jobs:
-  test-windows:
+  test-windows-complex:
     if: |
       ${{
         (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
@@ -66,7 +66,7 @@ jobs:
       shell: bash
       run:
         rm -rf ../.cargo
-  test-linux:
+  test-linux-complex:
     if: |
       ${{
         (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
@@ -89,9 +89,9 @@ jobs:
       run: ./script/clear-target-dir-if-larger-than 250
     - *step-cargo-run-nextest
     - *step-cargo-ci-clean
-  build-windows:
+  build-windows-complex:
     needs:
-    - test-windows
+    - test-windows-complex
     env:
       IS_NIGHTLY_BUILD: &template-env-nightly |
         ${{ github.ref == 'refs/heads/nightly' }}
@@ -109,9 +109,9 @@ jobs:
       name: List Target Folder
       shell: bash
       run: ls -lR ./target
-  build-linux:
+  build-linux-complex:
     needs:
-    - test-linux
+    - test-linux-complex
     env:
       IS_NIGHTLY_BUILD: *template-env-nightly
       CARGO_INCREMENTAL: 0
