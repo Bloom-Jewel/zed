@@ -172,3 +172,59 @@ jobs:
         target_triple=${host_line#*: }
         cargo build --release --package zed --target ${target_triple}
     - *step-list-target
+  aggregate-release:
+    needs:
+    - build-windows-quick
+    - build-windows-complex
+    - build-linux-complex
+    if: |
+      ${{
+        always() && (
+          startsWith(github.ref, 'refs/heads/') && (
+            (github.ref != 'refs/heads/stable') && (
+              endsWith(github.ref, '/stable') ||
+              endsWith(github.ref, '/staging') ||
+              false
+            )
+          )
+        )
+      }}
+    env:
+      IS_NIGHTLY_BUILD: *template-env-nightly
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        clean: false
+        sparse-checkout: |
+          crates/zed/Cargo.toml
+    - name: Fetch Artifacts
+      uses: actions/download-artifact@v8
+      with:
+        skip-decompress: true
+        path: ./target
+    - name: Determine Version
+      id: get-version
+      run: |
+        CARGO_VERSION=$(cat crates/zed/Cargo.toml | grep -E '^version' | cut -d= -f2 | grep -oE '[0-9][1-9]*(\.[0-9][1-9]*)*')
+        printf 'value=%s\n' "${CARGO_VERSION}" >> ${GITHUB_OUTPUT}
+    - name: Release Remove
+      uses: dev-drprasad/delete-tag-and-release@v0.2.1
+      with:
+        delete_release: true
+        tag_name: v${{ steps.get-version.outputs.value }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Release Update
+      uses: softprops/action-gh-release@v1
+      with:
+        name: v${{ steps.get-version.outputs.value }}
+        tag_name: v${{ steps.get-version.outputs.value }}
+        target_commitish: ${{ github.sha }}
+        body: |
+          Patched for personal preference from [v${{ steps.get-version.outputs.value }}](https://github.com/zed-industries/zed/releases/tag/v${{ steps.get-version.outputs.value }})
+        draft: false
+        prerelease: false
+        files: |
+          target/*
