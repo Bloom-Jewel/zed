@@ -25,8 +25,11 @@ jobs:
     runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
     - &step-git-longpath
-      name: Setup Git Configuration
-      run: git config --global core.longpaths true
+      name: Setup Long Path Fix
+      run: |
+        git config --global core.longpaths true
+        New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
+          -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
     - &step-checkout
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
       with:
