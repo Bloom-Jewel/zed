@@ -87,10 +87,13 @@ jobs:
     needs:
     - test-windows-complex
     env:
+      ARTIFACT_NAME: Windows Complex
       IS_NIGHTLY_BUILD: &template-env-nightly |
         ${{ github.ref == 'refs/heads/nightly' }}
       CARGO_INCREMENTAL: 0
       ZED_ARCH: x86_64
+    outputs:
+      artifact: ${{ steps.artifact.artifact-id }}
     name: Build on Windows (Complex)
     runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
@@ -101,7 +104,16 @@ jobs:
     - &step-list-target
       name: List Target Folder
       shell: bash
-      run: ls -lR ./target
+      run: ls -l ./target/release
+    - &step-upload-files-windows
+      id: artifact
+      name: Upload Artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: |
+          target/release/zed.exe
+          target/release/cli.exe
   build-windows-quick:
     if: |
       ${{
@@ -109,10 +121,13 @@ jobs:
         vars.USE_WINDOWS_RUNNER != 0 && vars.USE_SIMPLE_RUNNER != 0
       }}
     env:
+      ARTIFACT_NAME: Windows
       IS_NIGHTLY_BUILD: &template-env-nightly |
         ${{ github.ref == 'refs/heads/nightly' }}
       CARGO_INCREMENTAL: 0
       ZED_ARCH: x86_64
+    outputs:
+      artifact: ${{ steps.artifact.artifact-id }}
     name: Build on Windows (Simple)
     runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
@@ -134,12 +149,16 @@ jobs:
           --package zed `
           --package cli
     - *step-list-target
+    - *step-upload-files-windows
   build-linux-complex:
     needs:
     - test-linux-complex
     env:
+      ARTIFACT_NAME: Linux Complex
       IS_NIGHTLY_BUILD: *template-env-nightly
       CARGO_INCREMENTAL: 0
+    outputs:
+      artifact: ${{ steps.artifact.artifact-id }}
     name: Build on Ubuntu (Complex)
     runs-on: ${{ vars.NAME_LINUX_RUNNER }}
     steps:
