@@ -97,7 +97,7 @@ jobs:
     - *step-git-longpath
     - *step-checkout
     - name: Build Package
-      run: cargo build --release --package zed --target ${{ env.ZED_ARCH }}-pc-windows-msvc
+      run: cargo build --release --package zed --package cli --target ${{ env.ZED_ARCH }}-pc-windows-msvc
     - &step-list-target
       name: List Target Folder
       shell: bash
@@ -151,5 +151,5 @@ jobs:
         version_info=$(rustc --version --verbose)
         host_line=$(echo "$version_info" | grep host)
         target_triple=${host_line#*: }
-        cargo build --release --package zed --target ${target_triple}-pc-windows-msvc
+        cargo build --release --package zed --target ${target_triple}
     - *step-list-target
