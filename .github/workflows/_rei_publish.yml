@@ -22,7 +22,7 @@ jobs:
         vars.USE_WINDOWS_RUNNER != 0
       }}
     name: Test on Windows
-    runs-on: blacksmith-2vcpu-windows-2025
+    runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
     - &step-git-longpath
       name: Setup Git Configuration
@@ -73,7 +73,7 @@ jobs:
         vars.USE_LINUX_RUNNER != 0
       }}
     name: Test on Ubuntu
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ${{ vars.NAME_LINUX_RUNNER }}
     steps:
     - *step-checkout
     - *step-cargo-ci
@@ -98,7 +98,7 @@ jobs:
       CARGO_INCREMENTAL: 0
       ZED_ARCH: x86_64
     name: Build on Windows
-    runs-on: blacksmith-2vcpu-windows-2025
+    runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
     steps:
     - *step-git-longpath
     - *step-checkout
@@ -116,7 +116,7 @@ jobs:
       IS_NIGHTLY_BUILD: *template-env-nightly
       CARGO_INCREMENTAL: 0
     name: Build on Ubuntu
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ${{ vars.NAME_LINUX_RUNNER }}
     steps:
     - *step-checkout
     - *step-linux-general-setup
