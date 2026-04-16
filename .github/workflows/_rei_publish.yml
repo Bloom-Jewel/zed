@@ -12,7 +12,7 @@ on:
     - 'crates/**'
   workflow_dispatch:
 concurrency:
-  group: blacksmith-build-${{ github.ref_name }}
+  group: local-build-${{ github.ref_name }}
   cancel-in-progress: true
 jobs:
   test-windows-complex:
@@ -40,15 +40,6 @@ jobs:
       run: |
         mkdir -p ../.cargo
         cp .cargo/ci-config.toml ../.cargo/config.toml
-    - &step-windows-setup
-      name: Setup
-      run: |
-        $progressPreference = 'silentlyContinue'
-        Install-PackageProvider -Name NuGet -Force | Out-Null
-        Install-Module -Name Microsoft.WinGet.Client -Force -Repository PSGallery | Out-Null
-        Repair-WinGetPackageManager
-
-        winget install -e --id Microsoft.VisualStudio.2022.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Component.VC.Runtimes.x86.x64.Spectre"
     - &step-node-setup
       name: Setup Node
       uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
@@ -105,13 +96,44 @@ jobs:
     steps:
     - *step-git-longpath
     - *step-checkout
-    - *step-windows-setup
     - name: Build Package
       run: cargo build --release --package zed --target ${{ env.ZED_ARCH }}-pc-windows-msvc
     - &step-list-target
       name: List Target Folder
       shell: bash
       run: ls -lR ./target
+  build-windows-quick:
+    if: |
+      ${{
+        (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
+        vars.USE_WINDOWS_RUNNER != 0
+      }}
+    env:
+      IS_NIGHTLY_BUILD: &template-env-nightly |
+        ${{ github.ref == 'refs/heads/nightly' }}
+      CARGO_INCREMENTAL: 0
+      ZED_ARCH: x86_64
+    name: Build on Windows
+    runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
+    steps:
+    - *step-git-longpath
+    - *step-checkout
+    - name: Install rust Nightly
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: nightly
+        target: wasm32-wasip1
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: zed-windows-${{ hashFiles('**/Cargo.lock') }}
+        # workspaces: "zed -> target"
+    - name: Build Package
+      run: |
+        cargo build --release `
+          --package zed `
+          --package cli
+    - *step-list-target
   build-linux-complex:
     needs:
     - test-linux-complex
