@@ -141,7 +141,9 @@ jobs:
     - name: Rust Cache
       uses: Swatinem/rust-cache@v2
       with:
-        key: zed-windows-${{ hashFiles('**/Cargo.lock') }}
+        key: zed
+        add-job-id-key: true
+        add-rust-environment-hash-key: false
         # workspaces: "zed -> target"
     - name: Build Package
       run: |
