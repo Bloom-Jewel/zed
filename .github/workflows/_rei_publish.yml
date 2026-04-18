@@ -204,6 +204,9 @@ jobs:
       with:
         skip-decompress: true
         path: ./target
+    - name: Artifacts Sanity Check
+      run: |
+        [[ -d target ]] && [[ $(ls -1 target | wc -l) -gt 0 ]] || exit 1
     - name: Determine Version
       id: get-version
       run: |
