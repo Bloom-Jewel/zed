@@ -673,6 +673,40 @@ impl TerminalBuilder {
                 terminal.write_to_pty(b"\x0d");
             }
 
+            // Check whether it's a terminal spawned for a task or not.
+            // and also check if the task do really have an input buffer waiting or not.
+            let accept_input_buffer = terminal.task.is_some();
+            if accept_input_buffer {
+              let task = &((terminal.task).as_ref().unwrap()).spawned_task;
+
+              // Pass stdin buffer for task into the terminal.
+              if !no_task && accept_input_buffer && task.input_buffer.is_some() {
+                let buffer_ctr = task.input_buffer.clone();
+                let buffer = buffer_ctr.as_ref().unwrap();
+
+                terminal.write_to_pty(buffer.clone().into_bytes());
+                terminal.write_to_pty(b"\x0d");
+
+                let mut strokes: Vec<Keystroke> = vec![];
+                strokes.push(Keystroke::parse("ctrl-d").unwrap());
+
+                if cfg!(target_os = "windows") {
+                  strokes.push(Keystroke::parse("ctrl-z").unwrap());
+                  strokes.push(Keystroke::parse("enter").unwrap());
+                };
+
+                for stroke in strokes.iter() {
+                  let esc = to_esc_str(&stroke, &terminal.last_content.mode, false);
+                  if let Some(esc) = esc {
+                    match esc {
+                      Cow::Borrowed(key_buffer) => terminal.write_to_pty(key_buffer.as_bytes()),
+                      Cow::Owned(key_buffer) => terminal.write_to_pty(key_buffer.into_bytes()),
+                    };
+                  }
+                }
+              }
+            }
+
             Ok(TerminalBuilder {
                 terminal,
                 events_rx,

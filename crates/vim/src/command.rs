@@ -2475,6 +2475,7 @@ impl ShellExec {
                     reveal: RevealStrategy::NoFocus,
                     reveal_target: RevealTarget::Dock,
                     hide: HideStrategy::Never,
+                    input_buffer: None,
                     shell,
                     show_summary: false,
                     show_command: false,

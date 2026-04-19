@@ -1309,6 +1309,7 @@ impl RunningState {
             reveal: task::RevealStrategy::NoFocus,
             reveal_target: task::RevealTarget::Dock,
             hide: task::HideStrategy::Never,
+            input_buffer: None,
             shell,
             show_summary: false,
             show_command: false,

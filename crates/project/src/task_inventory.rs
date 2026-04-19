@@ -933,6 +933,7 @@ impl ContextProvider for BasicContextProvider {
         if !selected_text.trim().is_empty() {
             task_variables.insert(VariableName::SelectedText, selected_text);
         }
+        task_variables.insert(VariableName::FileBuffer, buffer_snapshot.text());
         let worktree = buffer
             .file()
             .map(|file| file.worktree_id(cx))
