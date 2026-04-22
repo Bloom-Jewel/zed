@@ -1265,6 +1265,9 @@ fn about(_: &mut Workspace, window: &mut Window, cx: &mut Context<Workspace>) {
     let mut detail = AppCommitSha::try_global(cx)
         .map(|sha| sha.full())
         .unwrap_or_default();
+
+    _ = write!(&mut detail, "\nPersonal patch by ReiFan49");
+
     if !detail.is_empty() {
         detail.push('\n');
     }

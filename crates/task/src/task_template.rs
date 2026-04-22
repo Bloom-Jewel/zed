@@ -58,6 +58,13 @@ pub struct TaskTemplate {
     /// * `on_success` — hide the terminal tab on task success only, otherwise behaves similar to `always`.
     #[serde(default)]
     pub hide: HideStrategy,
+    /// What to do with task's stdin buffer.
+    /// * `none` — do not send anything (default)
+    /// * `selected` — send current selected buffer
+    /// * `file` — send current file buffer
+    /// * `selected_or_file` — send current selected buffer, or else current file buffer
+    #[serde(default)]
+    pub input_buffer: InputBufferStrategy,
     /// Represents the tags which this template attaches to.
     /// Adding this removes this task from other UI and gives you ability to run it by tag.
     #[serde(default, deserialize_with = "non_empty_string_vec")]
@@ -107,6 +114,21 @@ pub enum HideStrategy {
     Always,
     /// Hide the terminal tab on task success only, otherwise behaves similar to `Always`.
     OnSuccess,
+}
+
+/// What to do with text content of the file for the task?
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum InputBufferStrategy {
+    /// Do not send anything to the task stdin buffer.
+    #[default]
+    None,
+    /// Send only selected text if any, otherwise don't.
+    Selected,
+    /// Send whole file buffer content.
+    File,
+    /// Send only selected text if any, otherwise send whole file buffer.
+    SelectedOrFile,
 }
 
 /// A group of Tasks defined in a JSON file.
@@ -221,6 +243,32 @@ impl TaskTemplate {
             .log_err()?;
         let id = TaskId(format!("{id_base}_{task_hash}_{variables_hash}"));
 
+        // Fetch stdin buffer from strategy
+        // Prioritize selection over file if any.
+        // Empty selection can be replaced with any file contents.
+        // However, empty files are not treated as non-existent.
+        let mut stdin_strategy = self.input_buffer;
+        let stdin_buffer = {
+          let mut buffer = None;
+
+          if stdin_strategy == InputBufferStrategy::Selected || stdin_strategy == InputBufferStrategy::SelectedOrFile {
+            match &task_variables.get(&VariableName::SelectedText.to_string()) {
+              Some(text_buffer) => { buffer = Some(text_buffer.to_string()); }
+              None if stdin_strategy == InputBufferStrategy::SelectedOrFile => { stdin_strategy = InputBufferStrategy::File; }
+              _ => {}
+            }
+          }
+
+          if buffer.as_mut().is_none_or(|x| *x == "") && stdin_strategy == InputBufferStrategy::File {
+            match &task_variables.get(&VariableName::FileBuffer.to_string()) {
+              Some(text_buffer) => { buffer = Some(text_buffer.to_string()); }
+              None => {}
+            }
+          }
+
+          buffer
+        };
+
         let env = {
             // Start with the project environment as the base.
             let mut env = cx.project_env.clone();
@@ -268,6 +316,7 @@ impl TaskTemplate {
                 reveal_target: self.reveal_target,
                 hide: self.hide,
                 shell: self.shell.clone(),
+                input_buffer: stdin_buffer,
                 show_summary: self.show_summary,
                 show_command: self.show_command,
                 show_rerun: true,

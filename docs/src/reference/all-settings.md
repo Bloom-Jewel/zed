@@ -5092,7 +5092,7 @@ See the [debugger page](../debugger.md) for more information about debugging sup
     "dock": "left",
     "default_width": 360,
     "status_style": "icon",
-    "fallback_branch_name": "main",
+    "fallback_branch_name": "master",
     "sort_by_path": false,
     "collapse_untracked_diff": false,
     "scrollbar": {

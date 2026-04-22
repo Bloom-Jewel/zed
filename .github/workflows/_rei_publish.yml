@@ -1,0 +1,235 @@
+# Simplified Build Action and Script
+
+name: Publish Build
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+  ZED_UPDATE_EXPLANATION: Auto updates disabled on this build.
+on:
+  push:
+    paths:
+    - '.github/workflows/_rei_publish.yml'
+    - 'crates/**'
+  workflow_dispatch:
+concurrency:
+  group: local-build-${{ github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  test-windows-complex:
+    if: |
+      ${{
+        (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
+        vars.USE_WINDOWS_RUNNER != 0 && vars.USE_COMPLEX_RUNNER != 0
+      }}
+    name: Test on Windows (Complex)
+    runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
+    steps:
+    - &step-git-longpath
+      name: Setup Long Path Fix
+      run: |
+        git config --global core.longpaths true
+        New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" `
+          -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+    - &step-checkout
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      with:
+        clean: false
+    - &step-cargo-ci
+      name: Setup Cargo Config
+      shell: bash
+      run: |
+        mkdir -p ../.cargo
+        cp .cargo/ci-config.toml ../.cargo/config.toml
+    - &step-node-setup
+      name: Setup Node
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+      with:
+        node-version: '20'
+    - &step-cargo-install-nextest
+      name: Cargo Install Nextest
+      uses: taiki-e/install-action@nextest
+    - name: Cleanup Target
+      shell: pwsh
+      run: ./script/clear-target-dir-if-larger-than.ps1 250
+    - &step-cargo-run-nextest
+      name: Cargo Nextest
+      run: cargo nextest run --workspace --no-fail-fast --no-tests=warn
+    - &step-cargo-ci-clean
+      name: Cleanup Cargo Config
+      if: always()
+      shell: bash
+      run:
+        rm -rf ../.cargo
+  test-linux-complex:
+    if: |
+      ${{
+        (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
+        vars.USE_LINUX_RUNNER != 0 && vars.USE_COMPLEX_RUNNER != 0
+      }}
+    name: Test on Ubuntu (Complex)
+    runs-on: ${{ vars.NAME_LINUX_RUNNER }}
+    steps:
+    - *step-checkout
+    - *step-cargo-ci
+    - *step-node-setup
+    - &step-linux-general-setup
+      name: Setup
+      run: ./script/linux
+    - &step-linux-wasi-setup
+      name: Setup WASI
+      run: ./script/download-wasi-sdk
+    - *step-cargo-install-nextest
+    - name: Cleanup Target
+      run: ./script/clear-target-dir-if-larger-than 250
+    - *step-cargo-run-nextest
+    - *step-cargo-ci-clean
+  build-windows-complex:
+    needs:
+    - test-windows-complex
+    env:
+      ARTIFACT_NAME: Windows Complex
+      IS_NIGHTLY_BUILD: &template-env-nightly |
+        ${{ github.ref == 'refs/heads/nightly' }}
+      CARGO_INCREMENTAL: 0
+      ZED_ARCH: x86_64
+    outputs:
+      artifact: ${{ steps.artifact.artifact-id }}
+    name: Build on Windows (Complex)
+    runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
+    steps:
+    - *step-git-longpath
+    - *step-checkout
+    - name: Build Package
+      run: cargo build --release --package zed --package cli --target ${{ env.ZED_ARCH }}-pc-windows-msvc
+    - &step-list-target
+      name: List Target Folder
+      shell: bash
+      run: ls -l ./target/release
+    - &step-upload-files-windows
+      id: artifact
+      name: Upload Artifacts
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: |
+          target/release/zed.exe
+          target/release/cli.exe
+  build-windows-quick:
+    if: |
+      ${{
+        (github.repository_owner == 'ReiFan49' || github.repository_owner == 'Bloom-Jewel') &&
+        vars.USE_WINDOWS_RUNNER != 0 && vars.USE_SIMPLE_RUNNER != 0
+      }}
+    env:
+      ARTIFACT_NAME: Windows
+      IS_NIGHTLY_BUILD: &template-env-nightly |
+        ${{ github.ref == 'refs/heads/nightly' }}
+      CARGO_INCREMENTAL: 0
+      ZED_ARCH: x86_64
+    outputs:
+      artifact: ${{ steps.artifact.artifact-id }}
+    name: Build on Windows (Simple)
+    runs-on: ${{ vars.NAME_WINDOWS_RUNNER }}
+    steps:
+    - *step-git-longpath
+    - *step-checkout
+    - name: Install rust Nightly
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: nightly
+        target: wasm32-wasip1
+    - name: Rust Cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        key: zed
+        add-job-id-key: true
+        add-rust-environment-hash-key: false
+        # workspaces: "zed -> target"
+    - name: Build Package
+      run: |
+        cargo build --release `
+          --package zed `
+          --package cli
+    - *step-list-target
+    - *step-upload-files-windows
+  build-linux-complex:
+    needs:
+    - test-linux-complex
+    env:
+      ARTIFACT_NAME: Linux Complex
+      IS_NIGHTLY_BUILD: *template-env-nightly
+      CARGO_INCREMENTAL: 0
+    outputs:
+      artifact: ${{ steps.artifact.artifact-id }}
+    name: Build on Ubuntu (Complex)
+    runs-on: ${{ vars.NAME_LINUX_RUNNER }}
+    steps:
+    - *step-checkout
+    - *step-linux-general-setup
+    - *step-linux-wasi-setup
+    - name: Build Package
+      run: |
+        version_info=$(rustc --version --verbose)
+        host_line=$(echo "$version_info" | grep host)
+        target_triple=${host_line#*: }
+        cargo build --release --package zed --target ${target_triple}
+    - *step-list-target
+  aggregate-release:
+    needs:
+    - build-windows-quick
+    - build-windows-complex
+    - build-linux-complex
+    if: |
+      ${{
+        always() && (
+          startsWith(github.ref, 'refs/heads/') && (
+            (github.ref != 'refs/heads/stable') && (
+              endsWith(github.ref, '/stable') ||
+              endsWith(github.ref, '/staging') ||
+              false
+            )
+          )
+        )
+      }}
+    env:
+      IS_NIGHTLY_BUILD: *template-env-nightly
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        clean: false
+        sparse-checkout: |
+          crates/zed/Cargo.toml
+    - name: Fetch Artifacts
+      uses: actions/download-artifact@v8
+      with:
+        skip-decompress: true
+        path: ./target
+    - name: Artifacts Sanity Check
+      run: |
+        [[ -d target ]] && [[ $(ls -1 target | wc -l) -gt 0 ]] || exit 1
+    - name: Determine Version
+      id: get-version
+      run: |
+        CARGO_VERSION=$(cat crates/zed/Cargo.toml | grep -E '^version' | cut -d= -f2 | grep -oE '[0-9][1-9]*(\.[0-9][1-9]*)*')
+        printf 'value=%s\n' "${CARGO_VERSION}" >> ${GITHUB_OUTPUT}
+    - name: Release Remove
+      uses: dev-drprasad/delete-tag-and-release@v0.2.1
+      with:
+        delete_release: true
+        tag_name: v${{ steps.get-version.outputs.value }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Release Update
+      uses: softprops/action-gh-release@v1
+      with:
+        name: v${{ steps.get-version.outputs.value }}
+        tag_name: v${{ steps.get-version.outputs.value }}
+        target_commitish: ${{ github.sha }}
+        body: |
+          Patched for personal preference from [v${{ steps.get-version.outputs.value }}](https://github.com/zed-industries/zed/releases/tag/v${{ steps.get-version.outputs.value }})
+        draft: false
+        prerelease: false
+        files: |
+          target/*

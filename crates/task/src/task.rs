@@ -23,7 +23,7 @@ pub use debug_format::{
     Request, TcpArgumentsTemplate, ZedDebugConfig,
 };
 pub use task_template::{
-    DebugArgsRequest, HideStrategy, RevealStrategy, TaskTemplate, TaskTemplates,
+    DebugArgsRequest, HideStrategy, InputBufferStrategy, RevealStrategy, TaskTemplate, TaskTemplates,
     substitute_variables_in_map, substitute_variables_in_str,
 };
 pub use util::shell::{Shell, ShellKind};
@@ -69,6 +69,8 @@ pub struct SpawnInTerminal {
     pub hide: HideStrategy,
     /// Which shell to use when spawning the task.
     pub shell: Shell,
+    /// What to do with task's stdin buffer.
+    pub input_buffer: Option<String>,
     /// Whether to show the task summary line in the task output (sucess/failure).
     pub show_summary: bool,
     /// Whether to show the command line in the task output.
@@ -172,6 +174,8 @@ pub enum VariableName {
     Column,
     /// Text from the latest selection.
     SelectedText,
+    /// Text from current buffer.
+    FileBuffer,
     /// The language of the currently opened buffer (e.g., "Rust", "Python").
     Language,
     /// The symbol selected by the symbol tagging system, specifically the @run capture in a runnables.scm
@@ -211,6 +215,7 @@ impl FromStr for VariableName {
             "SYMBOL" => Self::Symbol,
             "RUNNABLE_SYMBOL" => Self::RunnableSymbol,
             "SELECTED_TEXT" => Self::SelectedText,
+            "FILE_BUFFER" => Self::FileBuffer,
             "LANGUAGE" => Self::Language,
             "ROW" => Self::Row,
             "COLUMN" => Self::Column,
@@ -246,6 +251,7 @@ impl std::fmt::Display for VariableName {
             Self::Row => write!(f, "{ZED_VARIABLE_NAME_PREFIX}ROW"),
             Self::Column => write!(f, "{ZED_VARIABLE_NAME_PREFIX}COLUMN"),
             Self::SelectedText => write!(f, "{ZED_VARIABLE_NAME_PREFIX}SELECTED_TEXT"),
+            Self::FileBuffer => write!(f, "{ZED_VARIABLE_NAME_PREFIX}FILE_BUFFER"),
             Self::Language => write!(f, "{ZED_VARIABLE_NAME_PREFIX}LANGUAGE"),
             Self::RunnableSymbol => write!(f, "{ZED_VARIABLE_NAME_PREFIX}RUNNABLE_SYMBOL"),
             Self::PickProcessId => write!(f, "{ZED_VARIABLE_NAME_PREFIX}PICK_PID"),
